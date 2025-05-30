@@ -1,0 +1,25 @@
+portfolio_optimization/
+│
+├── data/                      # 数据处理相关模块
+│   ├── data_loader.py        # 数据加载基类
+│   └── random_generator.py   # 随机数据生成器
+│
+├── strategies/               # 投资策略模块
+│   ├── base_strategy.py     # 策略基类
+│   ├── mean_variance.py     # 均值方差策略
+│   ├── risk_parity.py      # 风险平价策略
+│   ├── conditional_risk_parity.py  # 条件风险平价策略
+│   ├── momentum_strategies.py      # 动量策略
+│   ├── hierarchical_strategies.py  # 分层策略
+│   └── kelly_strategy.py          # 凯利公式策略
+│
+├── backtest/                # 回测模块
+│   └── backtest_engine.py  # 回测引擎
+│
+├── visualization/           # 可视化模块
+│   └── performance_plots.py # 性能可视化工具
+│
+├── examples/               # 示例代码
+│   └── multi_strategy_demo.py  # 多策略组合示例
+│
+└── __init__.py            # 包初始化文件
