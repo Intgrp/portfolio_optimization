@@ -43,8 +43,13 @@ class MeanVarianceStrategy(BaseStrategy):
             投资组合权重
         """
         historical_data = self.get_historical_data(date)
-        mean_returns = historical_data.mean() * 252
-        cov_matrix = historical_data.cov() * 252
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=self.assets)
+        mean_returns = filtered_data.mean() * 252
+        cov_matrix = filtered_data.cov() * 252
         
         def objective(weights):
             portfolio_return = np.sum(mean_returns * weights)
@@ -64,19 +69,22 @@ class MeanVarianceStrategy(BaseStrategy):
                 {'type': 'eq', 'fun': lambda x: np.sum(mean_returns * x) - target_return}
             )
             
-        bounds = [(0.0, 1.0) for _ in range(len(self.assets))]  # 权重在0和1之间
+        bounds = [(0.0, 1.0) for _ in range(len(valid_assets))]
         
         # 初始权重为等权重
-        initial_weights = np.array([1.0/len(self.assets)] * len(self.assets))
+        initial_weights = np.array([1.0/len(valid_assets)] * len(valid_assets))
         
         # 优化求解
         result = minimize(objective, initial_weights, method='SLSQP',
                        constraints=constraints, bounds=bounds)
         
         if not result.success:
-            return pd.Series(initial_weights, index=self.assets)
-            
-        return pd.Series(result.x, index=self.assets)
+            valid_weights = initial_weights
+        else:
+            valid_weights = result.x
+        weights = pd.Series(0, index=self.assets)
+        weights[valid_assets] = valid_weights
+        return weights
     
     def calculate_efficient_frontier(self, date: str, n_points: int = 100) -> pd.DataFrame:
         """
@@ -95,8 +103,13 @@ class MeanVarianceStrategy(BaseStrategy):
             有效前沿数据，包含收益率和风险
         """
         historical_data = self.get_historical_data(date)
-        mean_returns = historical_data.mean() * 252
-        cov_matrix = historical_data.cov() * 252
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.DataFrame()
+        mean_returns = filtered_data.mean() * 252
+        cov_matrix = filtered_data.cov() * 252
         
         # 计算最小和最大可能收益率
         min_return = min(mean_returns)
@@ -108,8 +121,8 @@ class MeanVarianceStrategy(BaseStrategy):
         
         for target_return in target_returns:
             weights = self.generate_weights(date, target_return=target_return)
-            portfolio_return = np.sum(mean_returns * weights)
-            portfolio_risk = np.sqrt(weights.T @ cov_matrix @ weights)
+            portfolio_return = np.sum(mean_returns * weights[valid_assets])
+            portfolio_risk = np.sqrt(weights[valid_assets].T @ cov_matrix.values @ weights[valid_assets])
             efficient_frontier.append({
                 '收益率': portfolio_return,
                 '风险': portfolio_risk

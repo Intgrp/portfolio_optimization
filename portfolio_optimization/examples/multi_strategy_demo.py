@@ -44,6 +44,10 @@ def main():
     
     # 初始化策略
     strategies = {
+        '等权重策略': (
+            EqualWeightStrategy(prices=prices, returns=returns),
+            {}
+        ),
         # '均值方差策略': (
         #     MeanVarianceStrategy(prices=prices, returns=returns),
         #     {'risk_aversion': 1.0}
@@ -60,14 +64,14 @@ def main():
         #     MaximumMomentumStrategy(prices=prices, returns=returns),
         #     {'top_n': 8}
         # ),
-        # '动量阈值策略': (
-        #     ThresholdMomentumStrategy(prices=prices, returns=returns),
-        #     {'threshold': 0.0001}
-        # ),
-        # '分层拉菲诺策略': (
-        #     HierarchicalRaffinotStrategy(prices=prices, returns=returns),
-        #     {}
-        # ),
+        '动量阈值策略': (
+            ThresholdMomentumStrategy(prices=prices, returns=returns),
+            {'threshold': 0.0001}
+        ),
+        '分层拉菲诺策略': (
+            HierarchicalRaffinotStrategy(prices=prices, returns=returns),
+            {}
+        ),
         # '层级动量策略': (
         #     HierarchicalMomentumStrategy(prices=prices, returns=returns),
         #     {'top_n_per_cluster': 2}
@@ -76,10 +80,6 @@ def main():
             KellyStrategy(prices=prices, returns=returns, lookback_period=252),
             {}
         ),
-        '等权重策略': (
-            EqualWeightStrategy(prices=prices, returns=returns),
-            {}
-        )
     }
     
     # 初始化回测引擎

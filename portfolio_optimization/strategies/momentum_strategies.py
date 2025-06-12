@@ -56,7 +56,7 @@ class MomentumStrategyBase(BaseStrategy):
 class MaximumMomentumStrategy(MomentumStrategyBase):
     """最大动量策略"""
     
-    def generate_weights(self, date: str, top_n: int = 8, **kwargs) -> pd.Series:
+    def generate_weights(self, date: str, top_n: int = 5, **kwargs) -> pd.Series:
         """
         生成投资组合权重
         
@@ -65,7 +65,7 @@ class MaximumMomentumStrategy(MomentumStrategyBase):
         date : str
             当前日期
         top_n : int, optional
-            选择动量最大的前n个资产，默认为8
+            选择动量最大的前n个资产，默认为5
             
         Returns
         -------
@@ -73,15 +73,15 @@ class MaximumMomentumStrategy(MomentumStrategyBase):
             投资组合权重
         """
         historical_data = self.get_historical_data(date)
-        momentum_scores = self.calculate_momentum_score(historical_data)
-        
-        # 选择动量最大的top_n个资产
-        top_assets = momentum_scores.nlargest(top_n).index
-        
-        # 生成权重
-        weights = pd.Series(0.0, index=self.assets)
-        weights[top_assets] = 1.0 / top_n
-        
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=self.assets)
+        momentum_score = self.calculate_momentum_score(filtered_data)
+        top_assets = momentum_score.nlargest(top_n).index
+        weights = pd.Series(0, index=self.assets)
+        weights[top_assets] = 1.0 / len(top_assets)
         return weights
 
 class ThresholdMomentumStrategy(MomentumStrategyBase):
@@ -104,17 +104,14 @@ class ThresholdMomentumStrategy(MomentumStrategyBase):
             投资组合权重
         """
         historical_data = self.get_historical_data(date)
-        momentum_scores = self.calculate_momentum_score(historical_data)
-        
-        # 选择动量大于阈值的资产
-        selected_assets = momentum_scores[momentum_scores > threshold].index
-        
-        # 如果没有资产超过阈值，则使用等权重
-        if len(selected_assets) == 0:
-            return pd.Series(1.0/len(self.assets), index=self.assets)
-            
-        # 生成权重
-        weights = pd.Series(0.0, index=self.assets)
-        weights[selected_assets] = 1.0 / len(selected_assets)
-        
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=self.assets)
+        momentum_score = self.calculate_momentum_score(filtered_data)
+        selected_assets = momentum_score[momentum_score > threshold].index
+        weights = pd.Series(0, index=self.assets)
+        if len(selected_assets) > 0:
+            weights[selected_assets] = 1.0 / len(selected_assets)
         return weights 

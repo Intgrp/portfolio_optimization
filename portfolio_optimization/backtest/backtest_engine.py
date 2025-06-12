@@ -89,7 +89,7 @@ class BacktestEngine:
         weights_history = {}
         
         for strategy_name, (strategy, params) in strategies.items():
-            print(f"策略：{strategy} 执行回测")
+            print(f"策略：{strategy_name} 执行回测")
             values, weights = self.run_backtest(
                 strategy=strategy,
                 start_date=start_date,

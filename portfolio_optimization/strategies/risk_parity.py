@@ -81,18 +81,18 @@ class RiskParityStrategy(BaseStrategy):
             投资组合权重
         """
         historical_data = self.get_historical_data(date)
-        cov_matrix = historical_data.cov() * 252
-        
-        n_assets = len(self.assets)
-        initial_weights = np.array([1.0/n_assets] * n_assets)
-        
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=self.assets)
+        cov_matrix = filtered_data.cov() * 252
+        n_valid = len(valid_assets)
+        initial_weights = np.array([1.0/n_valid] * n_valid)
         constraints = [
-            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0}  # 权重和为1
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0}
         ]
-        
-        bounds = [(0.0, 1.0) for _ in range(n_assets)]  # 权重在0和1之间
-        
-        # 优化求解
+        bounds = [(0.0, 1.0) for _ in range(n_valid)]
         result = minimize(
             fun=self.risk_parity_objective,
             x0=initial_weights,
@@ -102,11 +102,13 @@ class RiskParityStrategy(BaseStrategy):
             bounds=bounds,
             options={'ftol': 1e-12}
         )
-        
         if not result.success:
-            return pd.Series(initial_weights, index=self.assets)
-            
-        return pd.Series(result.x, index=self.assets)
+            valid_weights = initial_weights
+        else:
+            valid_weights = result.x
+        weights = pd.Series(0, index=self.assets)
+        weights[valid_assets] = valid_weights
+        return weights
         
     def get_risk_contributions(self, weights: pd.Series, date: str) -> pd.Series:
         """
@@ -125,10 +127,15 @@ class RiskParityStrategy(BaseStrategy):
             各资产的风险贡献
         """
         historical_data = self.get_historical_data(date)
-        cov_matrix = historical_data.cov() * 252
-        
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=self.assets)
+        cov_matrix = filtered_data.cov() * 252
         risk_contrib = self.calculate_risk_contribution(
-            weights.values, cov_matrix
+            weights[valid_assets].values, cov_matrix
         )
-        
-        return pd.Series(risk_contrib, index=self.assets) 
+        result = pd.Series(0, index=self.assets)
+        result[valid_assets] = risk_contrib
+        return result 

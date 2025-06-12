@@ -51,7 +51,7 @@ class KellyStrategy(BaseStrategy):
         
         return kelly_fraction
         
-    def generate_weights(self, date: str, **kwargs) -> Dict[str, float]:
+    def generate_weights(self, date: str, **kwargs) -> pd.Series:
         """
         生成投资组合权重
         
@@ -62,32 +62,25 @@ class KellyStrategy(BaseStrategy):
         
         Returns
         -------
-        Dict[str, float]
-            资产权重字典
+        pd.Series
+            资产权重序列
         """
-        # 获取历史数据
         historical_data = self.get_historical_data(date)
-        
-        if len(historical_data) < self.lookback_period:
-            return {asset: 1.0/len(self.assets) for asset in self.assets}
-            
-        # 使用最近的lookback_period数据
-        recent_data = historical_data.iloc[-self.lookback_period:]
-        
-        # 计算每个资产的凯利比例
-        kelly_fractions = {}
-        for asset in self.assets:
-            kelly_fractions[asset] = self.calculate_kelly_fraction(recent_data[asset])
-            
-        # 将负的凯利比例设为0（不做空）
-        kelly_fractions = {k: max(0, v) for k, v in kelly_fractions.items()}
-        
-        # 如果所有资产的凯利比例都为0，则平均分配
-        if sum(kelly_fractions.values()) == 0:
-            return {asset: 1.0/len(self.assets) for asset in self.assets}
-            
-        # 归一化权重
-        total_fraction = sum(kelly_fractions.values())
-        weights = {asset: fraction/total_fraction for asset, fraction in kelly_fractions.items()}
-        
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=self.assets)
+        mean_returns = filtered_data.mean()
+        cov_matrix = filtered_data.cov()
+        try:
+            inv_cov = np.linalg.inv(cov_matrix.values)
+        except np.linalg.LinAlgError:
+            inv_cov = np.linalg.pinv(cov_matrix.values)
+        kelly_weights = inv_cov @ mean_returns.values
+        kelly_weights = np.maximum(kelly_weights, 0)
+        if kelly_weights.sum() > 0:
+            kelly_weights = kelly_weights / kelly_weights.sum()
+        weights = pd.Series(0, index=self.assets)
+        weights[valid_assets] = kelly_weights
         return weights 

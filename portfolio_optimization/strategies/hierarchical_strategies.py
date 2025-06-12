@@ -45,7 +45,7 @@ class HierarchicalStrategyBase(BaseStrategy):
         """
         corr_matrix = historical_data.corr()
         distance_matrix = np.sqrt(2 * (1 - corr_matrix))
-        return pd.DataFrame(distance_matrix, index=self.assets, columns=self.assets)
+        return pd.DataFrame(distance_matrix, index=historical_data.columns, columns=historical_data.columns)
         
     def perform_clustering(self, distance_matrix: pd.DataFrame) -> np.ndarray:
         """
@@ -66,7 +66,7 @@ class HierarchicalStrategyBase(BaseStrategy):
         clusters = fcluster(linkage_matrix, self.n_clusters, criterion='maxclust')
         return clusters
         
-    def get_cluster_assets(self, clusters: np.ndarray) -> Dict[int, List[str]]:
+    def get_cluster_assets(self, clusters: np.ndarray, valid_assets: list) -> Dict[int, List[str]]:
         """
         获取每个簇的资产列表
         
@@ -74,6 +74,8 @@ class HierarchicalStrategyBase(BaseStrategy):
         ----------
         clusters : np.ndarray
             聚类结果
+        valid_assets : list
+            有效资产列表
             
         Returns
         -------
@@ -82,7 +84,7 @@ class HierarchicalStrategyBase(BaseStrategy):
         """
         cluster_assets = {}
         for cluster_id in range(1, self.n_clusters + 1):
-            cluster_assets[cluster_id] = [asset for i, asset in enumerate(self.assets)
+            cluster_assets[cluster_id] = [asset for i, asset in enumerate(valid_assets)
                                         if clusters[i] == cluster_id]
         return cluster_assets
 
@@ -147,33 +149,26 @@ class HierarchicalRaffinotStrategy(HierarchicalStrategyBase):
             投资组合权重
         """
         historical_data = self.get_historical_data(date)
-        distance_matrix = self.calculate_distance_matrix(historical_data)
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days].tolist()
+        filtered_data = historical_data[valid_assets]
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=self.assets)
+        distance_matrix = self.calculate_distance_matrix(filtered_data)
         clusters = self.perform_clustering(distance_matrix)
-        cluster_assets = self.get_cluster_assets(clusters)
-        
-        # 计算协方差矩阵
-        cov_matrix = historical_data.cov() * 252
-        
-        # 初始化权重
+        cluster_assets = self.get_cluster_assets(clusters, valid_assets)
+        cov_matrix = filtered_data.cov() * 252
         weights = pd.Series(0.0, index=self.assets)
-        
-        # 对每个簇计算风险平价权重
         for cluster_id, assets in cluster_assets.items():
             if not assets:
                 continue
-                
-            # 获取簇内资产的协方差矩阵
             cluster_cov = cov_matrix.loc[assets, assets]
-            
-            # 优化求解
             n_assets = len(assets)
             initial_weights = np.array([1.0/n_assets] * n_assets)
-            
             constraints = [
                 {'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0}
             ]
             bounds = [(0.0, 1.0) for _ in range(n_assets)]
-            
             result = minimize(
                 fun=self.risk_parity_objective,
                 x0=initial_weights,
@@ -183,14 +178,11 @@ class HierarchicalRaffinotStrategy(HierarchicalStrategyBase):
                 bounds=bounds,
                 options={'ftol': 1e-12}
             )
-            
             if result.success:
                 cluster_weights = pd.Series(result.x, index=assets)
             else:
                 cluster_weights = pd.Series(initial_weights, index=assets)
-                
             weights[assets] = cluster_weights * (1.0 / self.n_clusters)
-            
         return weights
 
 class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBase):
@@ -240,7 +232,7 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
         historical_data = self.get_historical_data(date)
         distance_matrix = self.calculate_distance_matrix(historical_data)
         clusters = self.perform_clustering(distance_matrix)
-        cluster_assets = self.get_cluster_assets(clusters)
+        cluster_assets = self.get_cluster_assets(clusters, historical_data.columns.tolist())
         
         # 计算动量得分
         momentum_scores = self.calculate_momentum_score(historical_data)
