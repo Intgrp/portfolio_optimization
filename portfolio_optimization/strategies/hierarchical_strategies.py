@@ -44,9 +44,7 @@ class HierarchicalStrategyBase(BaseStrategy):
             距离矩阵
         """
         corr_matrix = historical_data.corr()
-        corr_matrix = (corr_matrix + corr_matrix.T) / 2  # 确保对称性
         distance_matrix = np.sqrt(2 * (1 - corr_matrix))
-        np.fill_diagonal(distance_matrix.values, 0)
         return pd.DataFrame(distance_matrix, index=self.assets, columns=self.assets)
         
     def perform_clustering(self, distance_matrix: pd.DataFrame) -> np.ndarray:

@@ -63,8 +63,8 @@ class RiskParityStrategy(BaseStrategy):
             目标函数值
         """
         risk_contrib = self.calculate_risk_contribution(weights, cov_matrix)
-        target_risk = np.sqrt(weights.T @ cov_matrix @ weights) / len(weights)
-        return np.sum((risk_contrib - target_risk)**2)
+        mean_rc = np.mean(risk_contrib)
+        return np.sum((risk_contrib - mean_rc)**2)
         
     def generate_weights(self, date: str, **kwargs) -> pd.Series:
         """

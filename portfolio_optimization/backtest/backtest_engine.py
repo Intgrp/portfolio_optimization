@@ -43,27 +43,24 @@ class BacktestEngine:
         Tuple[pd.Series, pd.DataFrame]
             组合净值和权重历史
         """
-        # 获取再平衡日期
-        trade_dates = pd.date_range(start=start_date, end=end_date)
-        trade_dates = [d for d in trade_dates if d in self.prices.index]
-        # 获取再平衡日期
-        rebalance_dates = pd.date_range(start=start_date, end=end_date, freq=rebalance_freq)
-        rebalance_dates = [d for d in rebalance_dates if d in self.prices.index]
-        
+        # 获取真实交易日
+        trade_dates = self.prices.index[(self.prices.index >= start_date) & (self.prices.index <= end_date)]
+        # 以周期分组，取每组最后一个交易日作为再平衡日
+        trade_dates_df = pd.DataFrame(index=trade_dates)
+        rebalance_dates = trade_dates_df.resample(rebalance_freq).last().index
+
         # 初始化权重历史
         weights_history = pd.DataFrame(index=self.prices.index, columns=self.prices.columns)
         current_weights = None
-        
-        # 对每个交易日更新权重
-        for date in trade_dates:
-            if current_weights is None or date in rebalance_dates:
-                current_weights = strategy.generate_weights(date, **strategy_params)
-            weights_history.loc[date] = current_weights
-            
-        # 计算组合收益和净值
+
+        for i, date in enumerate(trade_dates[:-1]):
+            if date in rebalance_dates:
+                current_weights = strategy.generate_weights(date)
+            weights_history.loc[trade_dates[i+1]] = current_weights
+
         portfolio_returns = (self.returns * weights_history).sum(axis=1)
         portfolio_values = (1 + portfolio_returns).cumprod()
-        
+
         return portfolio_values, weights_history
     
     def run_multiple_backtests(self, strategies: Dict[str, Tuple[BaseStrategy, Dict[str, Any]]],
@@ -92,6 +89,7 @@ class BacktestEngine:
         weights_history = {}
         
         for strategy_name, (strategy, params) in strategies.items():
+            print(f"策略：{strategy} 执行回测")
             values, weights = self.run_backtest(
                 strategy=strategy,
                 start_date=start_date,
