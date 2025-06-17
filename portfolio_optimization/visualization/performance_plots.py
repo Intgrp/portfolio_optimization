@@ -3,6 +3,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from typing import Dict, Optional
+import os
 
 class PerformancePlotter:
     """绩效可视化类"""
@@ -15,7 +16,9 @@ class PerformancePlotter:
         
     def plot_cumulative_returns(self, portfolio_values: pd.DataFrame,
                               title: str = '策略累计收益对比',
-                              figsize: tuple = (15, 8)) -> None:
+                              figsize: tuple = (15, 8),
+                              output_dir: Optional[str] = None,
+                              filename: str = 'cumulative_returns.png') -> None:
         """
         绘制累计收益对比图
         
@@ -27,6 +30,10 @@ class PerformancePlotter:
             图表标题，默认为'策略累计收益对比'
         figsize : tuple, optional
             图表大小，默认为(15, 8)
+        output_dir : str, optional
+            输出文件夹路径，如果提供则保存图表
+        filename : str, optional
+            文件名，默认为'cumulative_returns.png'
         """
         plt.figure(figsize=figsize)
         for strategy in portfolio_values.columns:
@@ -40,9 +47,19 @@ class PerformancePlotter:
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout()
         
+        if output_dir:
+            img_dir = os.path.join(output_dir, '图片')
+            os.makedirs(img_dir, exist_ok=True)
+            file_path = os.path.join(img_dir, filename)
+            plt.savefig(file_path)
+            print(f"已保存累计收益图到 {file_path}")
+        plt.close()
+        
     def plot_drawdown(self, portfolio_values: pd.DataFrame,
                      title: str = '策略回撤对比',
-                     figsize: tuple = (15, 8)) -> None:
+                     figsize: tuple = (15, 8),
+                     output_dir: Optional[str] = None,
+                     filename: str = 'drawdown.png') -> None:
         """
         绘制回撤对比图
         
@@ -54,6 +71,10 @@ class PerformancePlotter:
             图表标题，默认为'策略回撤对比'
         figsize : tuple, optional
             图表大小，默认为(15, 8)
+        output_dir : str, optional
+            输出文件夹路径，如果提供则保存图表
+        filename : str, optional
+            文件名，默认为'drawdown.png'
         """
         plt.figure(figsize=figsize)
         for strategy in portfolio_values.columns:
@@ -68,10 +89,20 @@ class PerformancePlotter:
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout()
         
+        if output_dir:
+            img_dir = os.path.join(output_dir, '图片')
+            os.makedirs(img_dir, exist_ok=True)
+            file_path = os.path.join(img_dir, filename)
+            plt.savefig(file_path)
+            print(f"已保存回撤图到 {file_path}")
+        plt.close()
+        
     def plot_rolling_metrics(self, portfolio_values: pd.DataFrame,
                            window: int = 252,
                            metrics: Optional[list] = None,
-                           figsize: tuple = (15, 15)) -> None:
+                           figsize: tuple = (15, 15),
+                           output_dir: Optional[str] = None,
+                           filename: str = 'rolling_metrics.png') -> None:
         """
         绘制滚动指标图
         
@@ -85,6 +116,10 @@ class PerformancePlotter:
             需要计算的指标列表，默认为['收益率', '波动率', '夏普比率']
         figsize : tuple, optional
             图表大小，默认为(15, 15)
+        output_dir : str, optional
+            输出文件夹路径，如果提供则保存图表
+        filename : str, optional
+            文件名，默认为'rolling_metrics.png'
         """
         if metrics is None:
             metrics = ['收益率', '波动率', '夏普比率']
@@ -125,9 +160,19 @@ class PerformancePlotter:
             
         plt.tight_layout()
         
+        if output_dir:
+            img_dir = os.path.join(output_dir, '图片')
+            os.makedirs(img_dir, exist_ok=True)
+            file_path = os.path.join(img_dir, filename)
+            plt.savefig(file_path)
+            print(f"已保存滚动指标图到 {file_path}")
+        plt.close()
+        
     def plot_correlation_heatmap(self, returns: pd.DataFrame,
                                title: str = '策略相关性热力图',
-                               figsize: tuple = (10, 8)) -> None:
+                               figsize: tuple = (10, 8),
+                               output_dir: Optional[str] = None,
+                               filename: str = 'correlation_heatmap.png') -> None:
         """
         绘制相关性热力图
         
@@ -139,6 +184,10 @@ class PerformancePlotter:
             图表标题，默认为'策略相关性热力图'
         figsize : tuple, optional
             图表大小，默认为(10, 8)
+        output_dir : str, optional
+            输出文件夹路径，如果提供则保存图表
+        filename : str, optional
+            文件名，默认为'correlation_heatmap.png'
         """
         plt.figure(figsize=figsize)
         correlation = returns.corr()
@@ -146,4 +195,12 @@ class PerformancePlotter:
         sns.heatmap(correlation, annot=True, cmap='coolwarm', center=0,
                    fmt='.2f', square=True)
         plt.title(title, fontsize=14)
-        plt.tight_layout() 
+        plt.tight_layout()
+        
+        if output_dir:
+            img_dir = os.path.join(output_dir, '图片')
+            os.makedirs(img_dir, exist_ok=True)
+            file_path = os.path.join(img_dir, filename)
+            plt.savefig(file_path)
+            print(f"已保存相关性热力图到 {file_path}")
+        plt.close() 

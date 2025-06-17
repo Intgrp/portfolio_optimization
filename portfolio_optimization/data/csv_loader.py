@@ -55,6 +55,9 @@ class CsvDataLoader(DataLoader):
 
     def load_data(self, start_date: str, end_date: str):
         returns = self.get_category_returns()
-        prices = self.load_ins_list_close_df()
+        if self.category == "品种净收益率":
+            prices = self.load_ins_list_close_df()
+        else:
+            prices = (1 + returns).cumprod()
         return prices.loc[start_date: end_date, :], returns.loc[start_date: end_date, :]
 

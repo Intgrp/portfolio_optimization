@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, List, Tuple, Optional
 from portfolio_optimization.strategies.base_strategy import BaseStrategy
+import os
 
 class BacktestEngine:
     """回测引擎"""
@@ -65,7 +66,8 @@ class BacktestEngine:
     
     def run_multiple_backtests(self, strategies: Dict[str, Tuple[BaseStrategy, Dict[str, Any]]],
                              start_date: str, end_date: str,
-                             rebalance_freq: str = 'M') -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
+                             rebalance_freq: str = 'M',
+                             output_dir: Optional[str] = None) -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
         """
         运行多个策略的回测
         
@@ -79,6 +81,8 @@ class BacktestEngine:
             结束日期
         rebalance_freq : str, optional
             再平衡频率，默认为'M'（月度）
+        output_dir : str, optional
+            输出文件夹路径，如果提供则保存权重表
             
         Returns
         -------
@@ -88,8 +92,14 @@ class BacktestEngine:
         portfolio_values = pd.DataFrame()
         weights_history = {}
         
+        if output_dir:
+            weights_dir = os.path.join(output_dir, '权重')
+            os.makedirs(weights_dir, exist_ok=True)
+            result_dir = os.path.join(output_dir, '回测结果')
+            os.makedirs(result_dir, exist_ok=True)
+
         for strategy_name, (strategy, params) in strategies.items():
-            print(f"策略：{strategy_name} 执行回测")
+            print(f"策略：{strategy_name} 开始回测")
             values, weights = self.run_backtest(
                 strategy=strategy,
                 start_date=start_date,
@@ -100,6 +110,16 @@ class BacktestEngine:
             portfolio_values[strategy_name] = values
             weights_history[strategy_name] = weights
             
+            if output_dir:
+                weights_file_path = os.path.join(output_dir, '权重', f'{strategy_name}_weights.csv')
+                weights.to_csv(weights_file_path)
+                print(f"已保存 {strategy_name} 权重表到 {weights_file_path}")
+        # 合并输出所有策略的累计收益率表
+        if output_dir:
+            returns_file_path = os.path.join(output_dir, '回测结果', 'all_strategies_cumulative_returns.csv')
+            portfolio_values.to_csv(returns_file_path)
+            print(f"已保存所有策略累计收益率表到 {returns_file_path}")
+
         return portfolio_values, weights_history
     
     def calculate_performance_metrics(self, portfolio_values: pd.Series) -> Dict[str, float]:
@@ -151,3 +171,23 @@ class BacktestEngine:
             performance_metrics[strategy] = metrics
             
         return pd.DataFrame(performance_metrics).T 
+
+    def save_performance_report(self, performance_df: pd.DataFrame, output_dir: str, filename: str = "performance_report.csv"):
+        """
+        保存策略表现报告
+        
+        Parameters
+        ----------
+        performance_df : pd.DataFrame
+            策略表现数据框
+        output_dir : str
+            输出文件夹路径
+        filename : str, optional
+            文件名，默认为"performance_report.csv"
+        """
+        if output_dir:
+            result_dir = os.path.join(output_dir, '回测结果')
+            os.makedirs(result_dir, exist_ok=True)
+            file_path = os.path.join(result_dir, filename)
+            performance_df.to_csv(file_path)
+            print(f"已保存策略表现报告到 {file_path}") 

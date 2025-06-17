@@ -8,6 +8,14 @@ class EqualWeightStrategy(BaseStrategy):
         super().__init__(prices, returns, lookback_period)
 
     def generate_weights(self, date: str, **kwargs) -> pd.Series:
-        n_assets = len(self.assets)
-        weights = pd.Series([1.0 / n_assets] * n_assets, index=self.assets)
+        # 取当前调仓日的价格
+        if date not in self.prices.index:
+            raise ValueError(f"日期 {date} 不在价格数据中")
+        price_row = self.prices.loc[date]
+        # 只对有价格（非NaN）的品种分配权重
+        valid_assets = price_row.dropna().index.tolist()
+        n_valid = len(valid_assets)
+        weights = pd.Series(0.0, index=self.assets)
+        if n_valid > 0:
+            weights.loc[valid_assets] = 1.0 / n_valid
         return weights 
