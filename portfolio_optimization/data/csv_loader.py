@@ -27,6 +27,7 @@ class CsvDataLoader(DataLoader):
         self.assets = assets
         # 收益率表选取的是品种的还是板块还是周期
         self.category = category
+        self.date_list = []
 
 
     def load_price_df(self, ins, usecols=None):
@@ -39,7 +40,7 @@ class CsvDataLoader(DataLoader):
         return df
 
     def load_ins_list_close_df(self):
-        df_result = pd.DataFrame()
+        df_result = pd.DataFrame(index=self.date_list)
         for ins in self.assets:
             df_temp = self.load_price_df(ins, usecols=['datetime', 'close'])
             df_result[ins] = df_temp['close']
@@ -50,6 +51,7 @@ class CsvDataLoader(DataLoader):
         file_name = os.path.join(self.data_path, '品种板块周期的净收益率.xlsx')
         df_data = pd.read_excel(file_name, sheet_name=self.category)
         df_data['时间'] = pd.to_datetime(df_data['时间'])
+        self.date_list = df_data['时间'].to_list()
         df_data.set_index('时间', inplace=True)
         return df_data
 

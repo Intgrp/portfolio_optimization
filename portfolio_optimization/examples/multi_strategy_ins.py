@@ -21,15 +21,14 @@ from portfolio_optimization.visualization.performance_plots import PerformancePl
 
 def main():
     # 定义资产列表
-    assets = ['AP', 'CF', 'FG', 'IC', 'IF', 'IH', 'MA', 'OI', 'PF', 'PK', 'RM',
-              'SA', 'SF', 'SM', 'SR', 'T', 'TA', 'TF', 'TS', 'UR', 'a', 'ag',
-              'al', 'au', 'b', 'bu', 'c', 'cs', 'cu', 'eb', 'eg',
-              'fu', 'hc', 'i', 'j', 'jd', 'jm', 'l', 'lh', 'lu', 'm', 'ni',
-              'p', 'pb', 'pg', 'pp', 'rb', 'ru', 'sc', 'sn', 'sp', 'ss', 'v',
-              'y', 'zn']
+    assets = ['AP', 'CF', 'FG', 'IC', 'IF', 'IH', 'IM', 'MA', 'OI', 'PF', 'PK', 'RM', 'SA',
+              'SF', 'SM', 'SR', 'T', 'TA', 'TF', 'TL', 'TS', 'UR', 'a', 'ag', 'al', 'ao',
+              'au', 'b', 'br', 'bu', 'c', 'cs', 'cu', 'eb', 'ec', 'eg', 'fu', 'hc', 'i',
+              'j', 'jd', 'jm', 'l', 'lc', 'lh', 'lu', 'm', 'ni', 'p', 'pb', 'pg', 'pp',
+              'rb', 'ru', 'sc', 'si', 'sn', 'sp', 'ss', 'v', 'y', 'zn']
     
     # 设置日期范围（确保使用工作日）
-    backtest_start = pd.Timestamp('2017-01-03').to_pydatetime()
+    backtest_start = pd.Timestamp('2011-01-04').to_pydatetime()
     backtest_end = pd.Timestamp('2024-12-31').to_pydatetime()
     # 生成模拟数据
     # data_loader = RandomDataGenerator(assets=assets, seed=42)
