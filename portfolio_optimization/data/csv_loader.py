@@ -53,6 +53,15 @@ class CsvDataLoader(DataLoader):
         df_data['时间'] = pd.to_datetime(df_data['时间'])
         self.date_list = df_data['时间'].to_list()
         df_data.set_index('时间', inplace=True)
+
+        # 遍历每个品种，处理初始为0的收益率
+        for col in df_data.columns:
+            # 找到第一个非0值非空值的位置
+            first_nonzero_idx = (~((df_data[col] == 0) | (pd.isna(df_data[col])))).to_numpy().nonzero()[0]
+            if len(first_nonzero_idx) > 0:
+                # 将第一个非0值之前的所有值设置为NaN
+                df_data.loc[df_data.index[:first_nonzero_idx[0]], col] = np.nan
+
         return df_data
 
     def load_data(self, start_date: str, end_date: str):
