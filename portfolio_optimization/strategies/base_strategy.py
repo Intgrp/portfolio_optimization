@@ -25,6 +25,9 @@ class BaseStrategy(ABC):
         self.returns = returns if returns is not None else prices.pct_change()
         self.lookback_period = lookback_period
         self.assets = prices.columns.tolist()
+
+    def update_strategy_name(self, strategy_name):
+        self.strategy_name = strategy_name
         
     @abstractmethod
     def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, **kwargs) -> pd.Series:

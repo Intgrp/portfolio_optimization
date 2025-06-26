@@ -148,6 +148,7 @@ class BacktestEngine:
 
         for strategy_name, (strategy, params) in strategies.items():
             print(f"策略：{strategy_name} 开始回测")
+            strategy.update_strategy_name(strategy_name)
             values, weights = self.run_backtest(
                 strategy=strategy,
                 start_date=start_date,
