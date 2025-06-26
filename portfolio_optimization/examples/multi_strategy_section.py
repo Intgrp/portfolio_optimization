@@ -47,10 +47,10 @@ def main():
             EqualWeightStrategy(prices=prices, returns=returns),
             {}
         ),
-        # '均值方差策略': (
-        #     MeanVarianceStrategy(prices=prices, returns=returns),
-        #     {'risk_aversion': 1.0}
-        # ),
+        '均值方差策略': (
+            MeanVarianceStrategy(prices=prices, returns=returns),
+            {'risk_aversion': 1.0}
+        ),
         '风险平价策略': (
             RiskParityStrategy(prices=prices, returns=returns),
             {}
@@ -59,10 +59,10 @@ def main():
             ConditionalRiskParityStrategy(prices=prices, returns=returns),
             {}
         ),
-        # '最大动量策略': (
-        #     MaximumMomentumStrategy(prices=prices, returns=returns),
-        #     {'top_n': 8}
-        # ),
+        '最大动量策略': (
+            MaximumMomentumStrategy(prices=prices, returns=returns),
+            {'top_n': 8}
+        ),
         '动量阈值策略': (
             ThresholdMomentumStrategy(prices=prices, returns=returns),
             {'threshold': 0.0001}
@@ -71,10 +71,10 @@ def main():
             HierarchicalRaffinotStrategy(prices=prices, returns=returns),
             {}
         ),
-        # '层级动量策略': (
-        #     HierarchicalMomentumStrategy(prices=prices, returns=returns),
-        #     {'top_n_per_cluster': 2}
-        # ),
+        '层级动量策略': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 2}
+        ),
         '凯利策略': (
             KellyStrategy(prices=prices, returns=returns, lookback_period=252),
             {}
