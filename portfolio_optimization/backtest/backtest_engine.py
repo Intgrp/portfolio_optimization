@@ -7,19 +7,16 @@ import os
 class BacktestEngine:
     """回测引擎"""
     
-    def __init__(self, prices: pd.DataFrame, returns: Optional[pd.DataFrame] = None):
+    def __init__(self, returns: Optional[pd.DataFrame] = None):
         """
         初始化回测引擎
         
         Parameters
         ----------
-        prices : pd.DataFrame
-            价格数据
         returns : pd.DataFrame, optional
             收益率数据，如果为None则根据价格数据计算
         """
-        self.prices = prices
-        self.returns = returns if returns is not None else prices.pct_change()
+        self.returns = returns
         
     def run_backtest(self, strategy: BaseStrategy, start_date: str, end_date: str,
                     rebalance_freq: str = 'M', **strategy_params) -> Tuple[pd.Series, pd.DataFrame]:
@@ -44,23 +41,64 @@ class BacktestEngine:
         Tuple[pd.Series, pd.DataFrame]
             组合净值和权重历史
         """
+        # 初始化权重历史
+        # 权重历史应包含所有可能出现的资产
+        all_assets = self.returns.columns.tolist()
+        weights_history = pd.DataFrame(index=self.returns.index, columns=all_assets)
+
         # 获取真实交易日
-        trade_dates = self.prices.index[(self.prices.index >= start_date) & (self.prices.index <= end_date)]
+        trade_dates = self.returns.index[(self.returns.index >= start_date) & (self.returns.index <= end_date)]
+
+        # 如果有交易日数据，为第一个交易日生成并设置初始权重
+        if not trade_dates.empty:
+            # 获取第一个交易日可用的资产：收益率非NaN且非0的品种
+            initial_available_returns = self.returns.loc[:trade_dates[0]]
+            initial_assets = initial_available_returns.columns[
+                (initial_available_returns != 0).any() & (~initial_available_returns.isna()).any()
+            ].tolist()
+            
+            # 如果没有可用的初始资产，则返回空权重系列
+            if not initial_assets:
+                return pd.Series(), pd.DataFrame(index=self.returns.index, columns=self.returns.columns)
+
+            initial_weights = strategy.generate_weights(trade_dates[0], current_assets=initial_assets, **strategy_params)
+            weights_history.loc[trade_dates[0], initial_weights.index] = initial_weights
+            # Keep track of the assets for which weights were just generated
+            last_generated_assets = initial_assets
+        else:
+            last_generated_assets = [] # No initial assets if no trade dates
+            # 如果没有交易日，则返回空权重系列
+            return pd.Series(), pd.DataFrame(index=self.returns.index, columns=self.returns.columns)
+        
         # 以周期分组，取每组最后一个交易日作为再平衡日
         trade_dates_df = pd.DataFrame(index=trade_dates)
-        rebalance_dates = trade_dates_df.resample(rebalance_freq).last().index
+        rebalance_dates = trade_dates_df.resample(rebalance_freq).last().index.intersection(trade_dates)
 
-        # 初始化权重历史
-        weights_history = pd.DataFrame(index=self.prices.index, columns=self.prices.columns)
-        current_weights = None
+        # 遍历交易日，在再平衡日或新增品种时生成并设置新权重
+        for date in trade_dates:
+            # 获取当前交易日可用的资产：收益率非NaN且非0的品种
+            current_available_returns = self.returns.loc[:date]
+            current_available_assets = current_available_returns.columns[
+                (current_available_returns != 0).any() & (~current_available_returns.isna()).any()
+            ].tolist()
+            
+            # Check if it's a rebalance date or if new assets have appeared since the last weight generation
+            if date in rebalance_dates or set(current_available_assets) != set(last_generated_assets):
+                current_weights = strategy.generate_weights(date, current_assets=current_available_assets, **strategy_params)
+                weights_history.loc[date, current_weights.index] = current_weights
+                last_generated_assets = current_available_assets
 
-        for i, date in enumerate(trade_dates[:-1]):
-            if date in rebalance_dates:
-                current_weights = strategy.generate_weights(date)
-            weights_history.loc[trade_dates[i+1]] = current_weights
+        # 前向填充权重，确保在再平衡日之间使用上一次的权重
+        weights_history = weights_history.ffill()
 
-        portfolio_returns = (self.returns * weights_history).sum(axis=1)
-        portfolio_values = (1 + portfolio_returns).cumprod()
+        # 确保权重历史只包含回测期间的交易日
+        weights_history = weights_history.loc[trade_dates]
+        
+        # 将NaN权重填充为0，表示该资产在该时期没有持仓
+        weights_history = weights_history.fillna(0)
+
+        portfolio_returns = (self.returns.loc[trade_dates] * weights_history).sum(axis=1)
+        portfolio_values = 1 + portfolio_returns.cumsum()
 
         return portfolio_values, weights_history
     

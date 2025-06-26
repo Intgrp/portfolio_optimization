@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Optional
+from typing import Optional, List
 from .base_strategy import BaseStrategy
 
 class EqualWeightStrategy(BaseStrategy):
@@ -7,15 +7,15 @@ class EqualWeightStrategy(BaseStrategy):
     def __init__(self, prices: pd.DataFrame, returns: Optional[pd.DataFrame] = None, lookback_period: int = 252):
         super().__init__(prices, returns, lookback_period)
 
-    def generate_weights(self, date: str, **kwargs) -> pd.Series:
-        # 取当前调仓日的价格
-        if date not in self.prices.index:
-            raise ValueError(f"日期 {date} 不在价格数据中")
-        price_row = self.prices.loc[date]
-        # 只对有价格（非NaN）的品种分配权重
-        valid_assets = price_row.dropna().index.tolist()
-        n_valid = len(valid_assets)
-        weights = pd.Series(0.0, index=self.assets)
-        if n_valid > 0:
-            weights.loc[valid_assets] = 1.0 / n_valid
+    def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, **kwargs) -> pd.Series:
+        # 确定要分配权重的资产列表
+        assets_to_allocate = current_assets if current_assets else self.assets
+
+        if not assets_to_allocate:
+            return pd.Series(dtype=float) # 如果没有资产，返回空Series
+
+        n_assets = len(assets_to_allocate)
+        # 为所有当前可用的资产分配等权重
+        weights = pd.Series(1.0 / n_assets, index=assets_to_allocate)
+
         return weights 

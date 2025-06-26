@@ -28,13 +28,12 @@ def main():
               'rb', 'ru', 'sc', 'si', 'sn', 'sp', 'ss', 'v', 'y', 'zn']
     
     # 设置日期范围（确保使用工作日）
-    backtest_start = pd.Timestamp('2011-01-04').to_pydatetime()
+    backtest_start = pd.Timestamp('2012-01-04').to_pydatetime()
     backtest_end = pd.Timestamp('2024-12-31').to_pydatetime()
     # 生成模拟数据
     # data_loader = RandomDataGenerator(assets=assets, seed=42)
     data_loader = CsvDataLoader(data_path=r"D:\workspace\temp\section_ml\data", assets=assets, category="品种净收益率")
-    prices, returns = data_loader.load_data(
-        start_date=backtest_start.strftime('%Y-%m-%d'),
+    prices, returns = data_loader.load_all_data(
         end_date=backtest_end.strftime('%Y-%m-%d')
     )
     returns = returns[assets]
@@ -52,10 +51,10 @@ def main():
             EqualWeightStrategy(prices=prices, returns=returns),
             {}
         ),
-        # '均值方差策略': (
-        #     MeanVarianceStrategy(prices=prices, returns=returns),
-        #     {'risk_aversion': 1.0}
-        # ),
+        '均值方差策略': (
+            MeanVarianceStrategy(prices=prices, returns=returns),
+            {'risk_aversion': 1.0}
+        ),
         '风险平价策略': (
             RiskParityStrategy(prices=prices, returns=returns),
             {}
@@ -64,18 +63,18 @@ def main():
             ConditionalRiskParityStrategy(prices=prices, returns=returns),
             {}
         ),
-        # '最大动量策略': (
-        #     MaximumMomentumStrategy(prices=prices, returns=returns),
-        #     {'top_n': 8}
-        # ),
+        '最大动量策略': (
+            MaximumMomentumStrategy(prices=prices, returns=returns),
+            {'top_n': 8}
+        ),
         '动量阈值策略': (
             ThresholdMomentumStrategy(prices=prices, returns=returns),
             {'threshold': 0.0001}
         ),
-        '分层拉菲诺策略': (
-            HierarchicalRaffinotStrategy(prices=prices, returns=returns),
-            {}
-        ),
+        # '分层拉菲诺策略': (
+        #     HierarchicalRaffinotStrategy(prices=prices, returns=returns),
+        #     {}
+        # ),
         # '层级动量策略': (
         #     HierarchicalMomentumStrategy(prices=prices, returns=returns),
         #     {'top_n_per_cluster': 2}
@@ -87,7 +86,7 @@ def main():
     }
     
     # 初始化回测引擎
-    backtest_engine = BacktestEngine(prices=prices, returns=returns)
+    backtest_engine = BacktestEngine(returns=returns)
     
     # 运行回测
     portfolio_values, weights_history = backtest_engine.run_multiple_backtests(

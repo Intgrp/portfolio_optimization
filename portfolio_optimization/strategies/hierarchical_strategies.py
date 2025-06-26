@@ -134,7 +134,7 @@ class HierarchicalRaffinotStrategy(HierarchicalStrategyBase):
         target_risk = np.sqrt(weights.T @ cov_matrix @ weights) / len(weights)
         return np.sum((risk_contrib - target_risk)**2)
         
-    def generate_weights(self, date: str, **kwargs) -> pd.Series:
+    def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, **kwargs) -> pd.Series:
         """
         生成投资组合权重
         
@@ -142,23 +142,38 @@ class HierarchicalRaffinotStrategy(HierarchicalStrategyBase):
         ----------
         date : str
             当前日期
+        current_assets : Optional[List[str]], optional
+            当前可用的资产列表，如果为None则使用策略初始化时的所有资产
             
         Returns
         -------
         pd.Series
             投资组合权重
         """
-        historical_data = self.get_historical_data(date)
+        historical_data = self.get_historical_data(date, current_assets=current_assets)
+        
+        # If no current assets are provided, default to all assets known to the strategy
+        if current_assets is None:
+            current_assets = self.assets
+            
+        # Filter historical data to only include current_assets that have data up to the current date
+        historical_data = historical_data[historical_data.columns.intersection(current_assets)]
+
         min_valid_days = int(self.lookback_period * 0.8)
         valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days].tolist()
         filtered_data = historical_data[valid_assets]
+        
         if len(valid_assets) == 0:
-            return pd.Series(0, index=self.assets)
+            return pd.Series(0, index=current_assets)
+            
         distance_matrix = self.calculate_distance_matrix(filtered_data)
         clusters = self.perform_clustering(distance_matrix)
         cluster_assets = self.get_cluster_assets(clusters, valid_assets)
         cov_matrix = filtered_data.cov() * 252
-        weights = pd.Series(0.0, index=self.assets)
+        
+        # Initialize weights with all current_assets, filled with zeros
+        weights = pd.Series(0.0, index=current_assets)
+        
         for cluster_id, assets in cluster_assets.items():
             if not assets:
                 continue
@@ -183,6 +198,7 @@ class HierarchicalRaffinotStrategy(HierarchicalStrategyBase):
             else:
                 cluster_weights = pd.Series(initial_weights, index=assets)
             weights[assets] = cluster_weights * (1.0 / self.n_clusters)
+            
         return weights
 
 class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBase):
@@ -213,7 +229,7 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
         MomentumStrategyBase.__init__(self, prices, returns, lookback_period,
                                     momentum_periods, momentum_weights)
         
-    def generate_weights(self, date: str, top_n_per_cluster: int = 2, **kwargs) -> pd.Series:
+    def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, top_n_per_cluster: int = 2, **kwargs) -> pd.Series:
         """
         生成投资组合权重
         
@@ -221,6 +237,8 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
         ----------
         date : str
             当前日期
+        current_assets : Optional[List[str]], optional
+            当前可用的资产列表，如果为None则使用策略初始化时的所有资产
         top_n_per_cluster : int, optional
             每个簇选择的资产数量，默认为2
             
@@ -229,16 +247,31 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
         pd.Series
             投资组合权重
         """
-        historical_data = self.get_historical_data(date)
-        distance_matrix = self.calculate_distance_matrix(historical_data)
+        historical_data = self.get_historical_data(date, current_assets=current_assets)
+        
+        # If no current assets are provided, default to all assets known to the strategy
+        if current_assets is None:
+            current_assets = self.assets
+            
+        # Filter historical data to only include current_assets that have data up to the current date
+        historical_data = historical_data[historical_data.columns.intersection(current_assets)]
+
+        min_valid_days = int(self.lookback_period * 0.8)
+        valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days].tolist()
+        filtered_data = historical_data[valid_assets]
+        
+        if len(valid_assets) == 0:
+            return pd.Series(0, index=current_assets)
+
+        distance_matrix = self.calculate_distance_matrix(filtered_data)
         clusters = self.perform_clustering(distance_matrix)
-        cluster_assets = self.get_cluster_assets(clusters, historical_data.columns.tolist())
+        cluster_assets = self.get_cluster_assets(clusters, valid_assets)
         
         # 计算动量得分
-        momentum_scores = self.calculate_momentum_score(historical_data)
+        momentum_scores = self.calculate_momentum_score(filtered_data)
         
-        # 初始化权重
-        weights = pd.Series(0.0, index=self.assets)
+        # 初始化权重，确保索引包含所有current_assets
+        weights = pd.Series(0.0, index=current_assets)
         
         # 对每个簇选择动量最大的资产
         for cluster_id, assets in cluster_assets.items():
@@ -252,6 +285,7 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
             ).index
             
             # 对选中的资产等权重配置
-            weights[top_assets] = 1.0 / (self.n_clusters * top_n_per_cluster)
+            if len(top_assets) > 0:
+                weights[top_assets] = 1.0 / (self.n_clusters * len(top_assets))
             
         return weights 

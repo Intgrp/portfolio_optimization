@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from .base_strategy import BaseStrategy
 
 class KellyStrategy(BaseStrategy):
@@ -51,7 +51,7 @@ class KellyStrategy(BaseStrategy):
         
         return kelly_fraction
         
-    def generate_weights(self, date: str, **kwargs) -> pd.Series:
+    def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, **kwargs) -> pd.Series:
         """
         生成投资组合权重
         
@@ -59,28 +59,46 @@ class KellyStrategy(BaseStrategy):
         ----------
         date : str
             当前日期
+        current_assets : Optional[List[str]], optional
+            当前可用的资产列表，如果为None则使用策略初始化时的所有资产
         
         Returns
         -------
         pd.Series
             资产权重序列
         """
-        historical_data = self.get_historical_data(date)
+        historical_data = self.get_historical_data(date, current_assets=current_assets)
+        
+        # If no current assets are provided, default to all assets known to the strategy
+        if current_assets is None:
+            current_assets = self.assets
+            
+        # Filter historical data to only include current_assets that have data up to the current date
+        historical_data = historical_data[historical_data.columns.intersection(current_assets)]
+        
         min_valid_days = int(self.lookback_period * 0.8)
         valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
         filtered_data = historical_data[valid_assets]
+        
         if len(valid_assets) == 0:
-            return pd.Series(0, index=self.assets)
+            return pd.Series(0, index=current_assets)
+            
         mean_returns = filtered_data.mean()
         cov_matrix = filtered_data.cov()
+        
         try:
             inv_cov = np.linalg.inv(cov_matrix.values)
         except np.linalg.LinAlgError:
             inv_cov = np.linalg.pinv(cov_matrix.values)
+            
         kelly_weights = inv_cov @ mean_returns.values
         kelly_weights = np.maximum(kelly_weights, 0)
+        
         if kelly_weights.sum() > 0:
             kelly_weights = kelly_weights / kelly_weights.sum()
-        weights = pd.Series(0, index=self.assets)
+            
+        # Create a Series with all current_assets and fill with zeros, then assign kelly_weights
+        weights = pd.Series(0, index=current_assets)
         weights[valid_assets] = kelly_weights
+        
         return weights 

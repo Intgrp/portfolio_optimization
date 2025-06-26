@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 class BaseStrategy(ABC):
     """策略基类"""
@@ -26,7 +26,7 @@ class BaseStrategy(ABC):
         self.assets = prices.columns.tolist()
         
     @abstractmethod
-    def generate_weights(self, date: str, **kwargs) -> pd.Series:
+    def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, **kwargs) -> pd.Series:
         """
         生成投资组合权重
         
@@ -34,6 +34,8 @@ class BaseStrategy(ABC):
         ----------
         date : str
             当前日期
+        current_assets : Optional[List[str]], optional
+            当前可用的资产列表，如果为None则使用策略初始化时的所有资产
         **kwargs : dict
             其他参数
             
@@ -44,7 +46,7 @@ class BaseStrategy(ABC):
         """
         pass
     
-    def get_historical_data(self, date: str) -> pd.DataFrame:
+    def get_historical_data(self, date: str, current_assets: Optional[List[str]] = None) -> pd.DataFrame:
         """
         获取历史数据
         
@@ -52,6 +54,8 @@ class BaseStrategy(ABC):
         ----------
         date : str
             当前日期
+        current_assets : Optional[List[str]], optional
+            当前可用的资产列表，如果提供，则只返回这些资产的历史数据
             
         Returns
         -------
@@ -60,7 +64,14 @@ class BaseStrategy(ABC):
         """
         date_loc = self.returns.index.get_loc(date)
         start_loc = max(0, date_loc - self.lookback_period + 1)
-        return self.returns.iloc[start_loc:date_loc + 1]
+        
+        historical_returns = self.returns.iloc[start_loc:date_loc + 1]
+        
+        if current_assets:
+            # Ensure only available assets are considered, and handle cases where an asset might not have historical data yet
+            historical_returns = historical_returns[historical_returns.columns.intersection(current_assets)]
+            
+        return historical_returns
     
     def calculate_portfolio_metrics(self, weights: pd.Series, 
                                   historical_data: pd.DataFrame) -> Dict[str, float]:

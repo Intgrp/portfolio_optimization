@@ -24,13 +24,12 @@ def main():
     assets = ['农产品','国债期货','有色金属','股指期货','能源化工','航运指数','贵金属', '黑色金属']
 
     # 设置日期范围（确保使用工作日）
-    backtest_start = pd.Timestamp('2017-01-03').to_pydatetime()
+    backtest_start = pd.Timestamp('2012-01-04').to_pydatetime()
     backtest_end = pd.Timestamp('2024-12-31').to_pydatetime()
     # 生成模拟数据
     # data_loader = RandomDataGenerator(assets=assets, seed=42)
     data_loader = CsvDataLoader(data_path=r"D:\workspace\temp\section_ml\data", assets=assets, category="板块净收益率")
-    prices, returns = data_loader.load_data(
-        start_date=backtest_start.strftime('%Y-%m-%d'),
+    prices, returns = data_loader.load_all_data(
         end_date=backtest_end.strftime('%Y-%m-%d')
     )
     returns = returns[assets]
@@ -83,7 +82,7 @@ def main():
     }
     
     # 初始化回测引擎
-    backtest_engine = BacktestEngine(prices=prices, returns=returns)
+    backtest_engine = BacktestEngine(returns=returns)
     
     # 运行回测
     portfolio_values, weights_history = backtest_engine.run_multiple_backtests(

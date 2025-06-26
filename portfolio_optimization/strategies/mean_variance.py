@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from .base_strategy import BaseStrategy
 
 class MeanVarianceStrategy(BaseStrategy):
@@ -23,8 +23,8 @@ class MeanVarianceStrategy(BaseStrategy):
         """
         super().__init__(prices, returns, lookback_period)
         
-    def generate_weights(self, date: str, target_return: Optional[float] = None,
-                        risk_aversion: float = 1.0) -> pd.Series:
+    def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, 
+                        target_return: Optional[float] = None, risk_aversion: float = 1.0) -> pd.Series:
         """
         生成投资组合权重
         
@@ -32,6 +32,8 @@ class MeanVarianceStrategy(BaseStrategy):
         ----------
         date : str
             当前日期
+        current_assets : Optional[List[str]], optional
+            当前可用的资产列表，如果为None则使用策略初始化时的所有资产
         target_return : float, optional
             目标收益率，如果为None则使用风险厌恶系数
         risk_aversion : float, optional
@@ -42,12 +44,22 @@ class MeanVarianceStrategy(BaseStrategy):
         pd.Series
             投资组合权重
         """
-        historical_data = self.get_historical_data(date)
+        historical_data = self.get_historical_data(date, current_assets=current_assets)
+        
+        # If no current assets are provided, default to all assets known to the strategy
+        if current_assets is None:
+            current_assets = self.assets
+            
+        # Filter historical data to only include current_assets that have data up to the current date
+        historical_data = historical_data[historical_data.columns.intersection(current_assets)]
+
         min_valid_days = int(self.lookback_period * 0.8)
         valid_assets = historical_data.columns[historical_data.notna().sum() > min_valid_days]
         filtered_data = historical_data[valid_assets]
+        
         if len(valid_assets) == 0:
-            return pd.Series(0, index=self.assets)
+            return pd.Series(0, index=current_assets)
+            
         mean_returns = filtered_data.mean() * 252
         cov_matrix = filtered_data.cov() * 252
         
@@ -82,8 +94,11 @@ class MeanVarianceStrategy(BaseStrategy):
             valid_weights = initial_weights
         else:
             valid_weights = result.x
-        weights = pd.Series(0, index=self.assets)
+            
+        # Create a Series with all current_assets and fill with zeros, then assign valid_weights
+        weights = pd.Series(0, index=current_assets)
         weights[valid_assets] = valid_weights
+        
         return weights
     
     def calculate_efficient_frontier(self, date: str, n_points: int = 100) -> pd.DataFrame:
