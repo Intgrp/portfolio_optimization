@@ -71,14 +71,14 @@ def main():
             ThresholdMomentumStrategy(prices=prices, returns=returns),
             {'threshold': 0.0001}
         ),
-        # '分层拉菲诺策略': (
-        #     HierarchicalRaffinotStrategy(prices=prices, returns=returns),
-        #     {}
-        # ),
-        # '层级动量策略': (
-        #     HierarchicalMomentumStrategy(prices=prices, returns=returns),
-        #     {'top_n_per_cluster': 2}
-        # ),
+        '分层拉菲诺策略': (
+            HierarchicalRaffinotStrategy(prices=prices, returns=returns),
+            {}
+        ),
+        '层级动量策略': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 2}
+        ),
         '凯利策略': (
             KellyStrategy(prices=prices, returns=returns, lookback_period=252),
             {}
@@ -86,7 +86,7 @@ def main():
     }
     
     # 初始化回测引擎
-    backtest_engine = BacktestEngine(returns=returns)
+    backtest_engine = BacktestEngine(returns=returns, output_dir=output_folder)
     
     # 运行回测
     portfolio_values, weights_history = backtest_engine.run_multiple_backtests(
@@ -94,7 +94,6 @@ def main():
         start_date=backtest_start.strftime('%Y-%m-%d'),
         end_date=backtest_end.strftime('%Y-%m-%d'),
         rebalance_freq='M',
-        output_dir=output_folder
     )
     
     # 计算策略表现
@@ -104,20 +103,20 @@ def main():
     backtest_engine.save_performance_report(performance_comparison, output_folder, filename="all_strategies_performance.csv")
     
     # 初始化可视化工具
-    plotter = PerformancePlotter()
+    plotter = PerformancePlotter(output_folder)
     
     # 绘制累计收益对比图
-    plotter.plot_cumulative_returns(portfolio_values, output_dir=output_folder, filename="cumulative_returns.png")
+    plotter.plot_cumulative_returns(portfolio_values, filename="cumulative_returns.png")
     
     # 绘制回撤对比图
-    plotter.plot_drawdown(portfolio_values, output_dir=output_folder, filename="drawdown.png")
+    plotter.plot_drawdown(portfolio_values, filename="drawdown.png")
     
     # 绘制滚动指标图
-    plotter.plot_rolling_metrics(portfolio_values, output_dir=output_folder, filename="rolling_metrics.png")
+    plotter.plot_rolling_metrics(portfolio_values, filename="rolling_metrics.png")
     
     # 绘制相关性热力图
     strategy_returns = portfolio_values.pct_change().dropna()
-    plotter.plot_correlation_heatmap(strategy_returns, output_dir=output_folder, filename="correlation_heatmap.png")
+    plotter.plot_correlation_heatmap(strategy_returns, filename="correlation_heatmap.png")
     # plt.show()
     
 if __name__ == "__main__":

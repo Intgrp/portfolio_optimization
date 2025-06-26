@@ -6,6 +6,7 @@ class EqualWeightStrategy(BaseStrategy):
     """等权重策略：所有资产权重相等，不随收益率变化"""
     def __init__(self, prices: pd.DataFrame, returns: Optional[pd.DataFrame] = None, lookback_period: int = 252):
         super().__init__(prices, returns, lookback_period)
+        self.strategy_name = "等权重策略"
 
     def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, **kwargs) -> pd.Series:
         # 确定要分配权重的资产列表

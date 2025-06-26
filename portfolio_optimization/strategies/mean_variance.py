@@ -22,6 +22,7 @@ class MeanVarianceStrategy(BaseStrategy):
             回溯期长度，默认为252个交易日
         """
         super().__init__(prices, returns, lookback_period)
+        self.strategy_name = "均值方差策略"
         
     def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, 
                         target_return: Optional[float] = None, risk_aversion: float = 1.0) -> pd.Series:

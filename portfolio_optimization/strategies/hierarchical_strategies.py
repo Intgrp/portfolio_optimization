@@ -28,6 +28,7 @@ class HierarchicalStrategyBase(BaseStrategy):
         """
         super().__init__(prices, returns, lookback_period)
         self.n_clusters = n_clusters
+        self.strategy_name = "层级策略基类"
         
     def calculate_distance_matrix(self, historical_data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -90,6 +91,9 @@ class HierarchicalStrategyBase(BaseStrategy):
 
 class HierarchicalRaffinotStrategy(HierarchicalStrategyBase):
     """分层拉菲诺策略"""
+    def __init__(self, prices: pd.DataFrame, returns: Optional[pd.DataFrame] = None, lookback_period: int = 252):
+        super().__init__(prices, returns, lookback_period)
+        self.strategy_name = "分层拉菲诺策略"
     
     def calculate_risk_contribution(self, weights: np.ndarray,
                                  cov_matrix: pd.DataFrame) -> np.ndarray:
@@ -228,6 +232,7 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
         HierarchicalStrategyBase.__init__(self, prices, returns, lookback_period, n_clusters)
         MomentumStrategyBase.__init__(self, prices, returns, lookback_period,
                                     momentum_periods, momentum_weights)
+        self.strategy_name = "层级动量策略"
         
     def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, top_n_per_cluster: int = 2, **kwargs) -> pd.Series:
         """

@@ -7,7 +7,7 @@ import os
 class BacktestEngine:
     """回测引擎"""
     
-    def __init__(self, returns: Optional[pd.DataFrame] = None):
+    def __init__(self, returns: Optional[pd.DataFrame] = None, output_dir: str = None):
         """
         初始化回测引擎
         
@@ -17,6 +17,10 @@ class BacktestEngine:
             收益率数据，如果为None则根据价格数据计算
         """
         self.returns = returns
+        if output_dir is None:
+            output_dir = os.getcwd()
+        self.output_dir = output_dir
+
         
     def run_backtest(self, strategy: BaseStrategy, start_date: str, end_date: str,
                     rebalance_freq: str = 'M', **strategy_params) -> Tuple[pd.Series, pd.DataFrame]:
@@ -97,15 +101,23 @@ class BacktestEngine:
         # 将NaN权重填充为0，表示该资产在该时期没有持仓
         weights_history = weights_history.fillna(0)
 
-        portfolio_returns = (self.returns.loc[trade_dates] * weights_history).sum(axis=1)
+        portfolio_each_returns = (self.returns.loc[trade_dates] * weights_history)
+        portfolio_returns = portfolio_each_returns.sum(axis=1)
+
+        if self.output_dir:
+            daily_return_file_path = os.path.join(self.output_dir, '加权后各品种每日收益率')
+            os.makedirs(daily_return_file_path, exist_ok=True)
+            daily_return_file = os.path.join(daily_return_file_path, f'{strategy.strategy_name}_returns.csv')
+            portfolio_each_returns.to_csv(daily_return_file)
+            print(f"已保存所有策略累计收益率表到 {daily_return_file}")
+
         portfolio_values = 1 + portfolio_returns.cumsum()
 
         return portfolio_values, weights_history
     
     def run_multiple_backtests(self, strategies: Dict[str, Tuple[BaseStrategy, Dict[str, Any]]],
                              start_date: str, end_date: str,
-                             rebalance_freq: str = 'M',
-                             output_dir: Optional[str] = None) -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
+                             rebalance_freq: str = 'M') -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
         """
         运行多个策略的回测
         
@@ -119,9 +131,7 @@ class BacktestEngine:
             结束日期
         rebalance_freq : str, optional
             再平衡频率，默认为'M'（月度）
-        output_dir : str, optional
-            输出文件夹路径，如果提供则保存权重表
-            
+
         Returns
         -------
         Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]
@@ -130,10 +140,10 @@ class BacktestEngine:
         portfolio_values = pd.DataFrame()
         weights_history = {}
         
-        if output_dir:
-            weights_dir = os.path.join(output_dir, '权重')
+        if self.output_dir:
+            weights_dir = os.path.join(self.output_dir, '权重')
             os.makedirs(weights_dir, exist_ok=True)
-            result_dir = os.path.join(output_dir, '回测结果')
+            result_dir = os.path.join(self.output_dir, '回测结果')
             os.makedirs(result_dir, exist_ok=True)
 
         for strategy_name, (strategy, params) in strategies.items():
@@ -148,13 +158,13 @@ class BacktestEngine:
             portfolio_values[strategy_name] = values
             weights_history[strategy_name] = weights
             
-            if output_dir:
-                weights_file_path = os.path.join(output_dir, '权重', f'{strategy_name}_weights.csv')
+            if self.output_dir:
+                weights_file_path = os.path.join(self.output_dir, '权重', f'{strategy_name}_weights.csv')
                 weights.to_csv(weights_file_path)
                 print(f"已保存 {strategy_name} 权重表到 {weights_file_path}")
         # 合并输出所有策略的累计收益率表
-        if output_dir:
-            returns_file_path = os.path.join(output_dir, '回测结果', 'all_strategies_cumulative_returns.csv')
+        if self.output_dir:
+            returns_file_path = os.path.join(self.output_dir, '回测结果', 'all_strategies_cumulative_returns.csv')
             portfolio_values.to_csv(returns_file_path)
             print(f"已保存所有策略累计收益率表到 {returns_file_path}")
 

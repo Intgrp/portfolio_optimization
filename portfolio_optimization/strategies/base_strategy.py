@@ -20,6 +20,7 @@ class BaseStrategy(ABC):
         lookback_period : int, optional
             回溯期长度，默认为252个交易日
         """
+        self.strategy_name = "基类策略"
         self.prices = prices
         self.returns = returns if returns is not None else prices.pct_change()
         self.lookback_period = lookback_period

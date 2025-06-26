@@ -25,6 +25,7 @@ class ConditionalRiskParityStrategy(BaseStrategy):
         """
         super().__init__(prices, returns, lookback_period)
         self.confidence_level = confidence_level
+        self.strategy_name = "条件风险平价策略"
         
     def calculate_cvar(self, returns: pd.Series, confidence_level: float) -> float:
         """

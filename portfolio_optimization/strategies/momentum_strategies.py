@@ -28,6 +28,7 @@ class MomentumStrategyBase(BaseStrategy):
         super().__init__(prices, returns, lookback_period)
         self.momentum_periods = momentum_periods or [21, 63, 252]
         self.momentum_weights = momentum_weights or [0.5, 0.3, 0.2]
+        self.strategy_name = "动量策略基类"
         
     def calculate_momentum_score(self, historical_data: pd.DataFrame) -> pd.Series:
         """
@@ -55,6 +56,10 @@ class MomentumStrategyBase(BaseStrategy):
 
 class MaximumMomentumStrategy(MomentumStrategyBase):
     """最大动量策略"""
+
+    def __init__(self, prices: pd.DataFrame, returns: Optional[pd.DataFrame] = None, lookback_period: int = 252):
+        super().__init__(prices, returns, lookback_period)
+        self.strategy_name = "最大动量策略"
     
     def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, top_n: int = 5, **kwargs) -> pd.Series:
         """
@@ -102,6 +107,10 @@ class MaximumMomentumStrategy(MomentumStrategyBase):
 
 class ThresholdMomentumStrategy(MomentumStrategyBase):
     """动量阈值策略"""
+
+    def __init__(self, prices: pd.DataFrame, returns: Optional[pd.DataFrame] = None, lookback_period: int = 252):
+        super().__init__(prices, returns, lookback_period)
+        self.strategy_name = "动量阈值策略"
     
     def generate_weights(self, date: str, current_assets: Optional[List[str]] = None, threshold: float = 0.0, **kwargs) -> pd.Series:
         """

@@ -22,6 +22,7 @@ class KellyStrategy(BaseStrategy):
         """
         super().__init__(prices, returns)
         self.lookback_period = lookback_period
+        self.strategy_name = "凯利策略"
         
     def calculate_kelly_fraction(self, historical_returns: pd.Series) -> float:
         """

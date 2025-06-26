@@ -22,6 +22,7 @@ class RiskParityStrategy(BaseStrategy):
             回溯期长度，默认为252个交易日
         """
         super().__init__(prices, returns, lookback_period)
+        self.strategy_name = "风险平价策略"
         
     def calculate_risk_contribution(self, weights: np.ndarray,
                                  cov_matrix: pd.DataFrame) -> np.ndarray:
