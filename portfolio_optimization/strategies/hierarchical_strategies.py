@@ -84,9 +84,17 @@ class HierarchicalStrategyBase(BaseStrategy):
             每个簇的资产列表
         """
         cluster_assets = {}
-        for cluster_id in range(1, self.n_clusters + 1):
-            cluster_assets[cluster_id] = [asset for i, asset in enumerate(valid_assets)
-                                        if clusters[i] == cluster_id]
+        # clusters包含簇索引，选择最大的索引，就是最多的簇数量
+        real_clusters = min(self.n_clusters, max(clusters))
+        for cluster_id in range(1, real_clusters + 1):
+            temp = []
+            for i, asset in enumerate(valid_assets):
+                if clusters[i] == cluster_id:
+                    temp.append(asset)
+            if len(temp) > 0:
+                cluster_assets[cluster_id] = temp
+
+        print(f"默认设置簇数量：{self.n_clusters} 最终设置簇数量：{len(cluster_assets)}, 簇列表：{cluster_assets}")
         return cluster_assets
 
 class HierarchicalRaffinotStrategy(HierarchicalStrategyBase):
@@ -277,9 +285,9 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
         
         # 初始化权重，确保索引包含所有current_assets
         weights = pd.Series(0.0, index=current_assets)
-        
+        # 选取设置的簇数量和实际聚类的簇数量之间的最小值作为实际可用的簇数量
+        real_clusters = min(self.n_clusters, len(cluster_assets))
         # 对每个簇选择动量最大的资产
-        print(f"层级聚类下，划分的簇个数：{len(cluster_assets)}")
         for cluster_id, assets in cluster_assets.items():
             if not assets:
                 continue
@@ -292,6 +300,6 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
             
             # 对选中的资产等权重配置
             if len(top_assets) > 0:
-                weights[top_assets] = 1.0 / (self.n_clusters * len(top_assets))
+                weights[top_assets] = 1.0 / (real_clusters * len(top_assets))
             
         return weights 
