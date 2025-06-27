@@ -160,7 +160,12 @@ class BacktestEngine:
             weights_history[strategy_name] = weights
             
             if self.output_dir:
-                weights_file_path = os.path.join(self.output_dir, '权重', f'{strategy_name}_weights.csv')
+                if not all((weights.sum(axis=1) - 1) < 1e-6):
+                    print(f"当前策略：{strategy_name} 权重分配异常，总和不为1")
+                    file_name = f'{strategy_name}_weights_error.csv'
+                else:
+                    file_name = f'{strategy_name}_weights.csv'
+                weights_file_path = os.path.join(self.output_dir, '权重', file_name)
                 weights.to_csv(weights_file_path)
                 print(f"已保存 {strategy_name} 权重表到 {weights_file_path}")
         # 合并输出所有策略的累计收益率表
