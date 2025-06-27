@@ -71,9 +71,37 @@ def main():
             HierarchicalRaffinotStrategy(prices=prices, returns=returns),
             {}
         ),
-        '层级动量策略': (
+        '层级动量策略1': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 1}
+        ),
+        '层级动量策略2': (
             HierarchicalMomentumStrategy(prices=prices, returns=returns),
             {'top_n_per_cluster': 2}
+        ),
+        '层级动量策略3': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 3}
+        ),
+        '层级动量策略4': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 4}
+        ),
+        '层级动量策略5': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 5}
+        ),
+        '层级动量策略6': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 6}
+        ),
+        '层级动量策略7': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 7}
+        ),
+        '层级动量策略8': (
+            HierarchicalMomentumStrategy(prices=prices, returns=returns),
+            {'top_n_per_cluster': 8}
         ),
         '凯利策略': (
             KellyStrategy(prices=prices, returns=returns, lookback_period=252),

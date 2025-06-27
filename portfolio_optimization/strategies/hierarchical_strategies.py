@@ -279,6 +279,7 @@ class HierarchicalMomentumStrategy(HierarchicalStrategyBase, MomentumStrategyBas
         weights = pd.Series(0.0, index=current_assets)
         
         # 对每个簇选择动量最大的资产
+        print(f"层级聚类下，划分的簇个数：{len(cluster_assets)}")
         for cluster_id, assets in cluster_assets.items():
             if not assets:
                 continue
